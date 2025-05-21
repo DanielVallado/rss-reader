@@ -65,6 +65,7 @@
     
     // Reload the feed when the component is mounted
     $: feed = data.feed ?? [];
+    $: page = data.page ?? 0;
 
     $: sortedFeed = sortArticles(feed, selectedFilter);
 
@@ -115,7 +116,9 @@
     </search>
 
     {#if displayedFeed.length > 0 }
-        <Feed feed={displayedFeed} page={page} pageCount={pageCount} priorityCount={priorityCount}/>
+        {#key page}
+            <Feed feed={displayedFeed} page={page} pageCount={pageCount} priorityCount={priorityCount}/>
+        {/key}
     {:else}
         <p>No se encontraron feeds</p>
     {/if}    

@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Card, formatDate } from '$lib';
+    import { goto } from '$app/navigation';
     import type { ArticleWithCategories } from '$lib/server/services';
 
     export let feed: ArticleWithCategories[] = [];
@@ -7,14 +8,9 @@
     export let pageCount: number;
     export let priorityCount: number;
 
-    const itemsPerPage = 12;
-
-    $: paginatedFeed = feed.slice((page - 1) * itemsPerPage, page * itemsPerPage);
-
-
     function goTo(p: number) {
         if (p < 1 || p > pageCount) return;
-        page = p; 
+        goto(`?page=${p}`);
     }
 </script>
 
@@ -57,7 +53,7 @@
 </div>
 
 <div class="feed">
-    {#each paginatedFeed as item, i (item.id)}
+    {#each feed as item, i (item.id)}
     <Card date={formatDate(item.publishedAt ?? '') ?? ''} 
         title={item.title} link={item.link} 
         description={item.description ?? ''} 

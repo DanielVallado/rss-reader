@@ -19,6 +19,10 @@ export async function getAllArticles(): Promise<Articles[]> {
   return await db.select().from(articles);
 }
 
+export async function getArticlesPaginated(limit: number, offset: number): Promise<Articles[]> {
+  return await db.select().from(articles).limit(limit).offset(offset);
+}
+
 export async function getArticleById(id: number): Promise<Articles | null> {
   const [article] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
   return article || null;

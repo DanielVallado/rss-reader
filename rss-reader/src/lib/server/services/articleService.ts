@@ -10,36 +10,55 @@ import type { Article, Category } from "$lib/server/repositories";
 export type ArticleWithCategories = Article & { categories: string[] };
 
 export async function getAllArticles(): Promise<ArticleWithCategories[]> {
-  const [articles, categoryArticleRelations, categories] = await Promise.all([
-    repository.getAllArticles(),
+  const articles = await repository.getAllArticles();
+  const enrichedArticles = await enrichArticlesWithCategories(articles);
+  const sortedEnrichedArticles = sortArticles(enrichedArticles, "date");
+
+  return sortedEnrichedArticles;
+}
+
+export async function getPaginatedArticles(limit: number, offset: number): Promise<ArticleWithCategories[]> {
+  const articles = await repository.getArticlesPaginated(limit, offset);
+  const enrichedArticles = await enrichArticlesWithCategories(articles);
+  
+  return enrichedArticles;
+}
+
+
+async function enrichArticlesWithCategories(articles: Article[]): Promise<ArticleWithCategories[]> {
+  const [categoryArticleRelations, categories] = await Promise.all([
     repository.getAllCategoriesArticles(),
     repository.getAllCategories(),
   ]);
 
-  const categoryNameById = new Map<number, string>(categories.map(
+  const articleIds = articles.map((article) => article.id);
+
+  const filteredRelations = categoryArticleRelations.filter((relation) =>
+    articleIds.includes(relation.articleId)
+  );
+
+  const categoryNameById = new Map<number, string>(
+    categories.map(
       (category) => [category.id!, category.name] as [number, string]
     )
   );
 
-  const categoryNamesByArticleId = categoryArticleRelations.reduce(
-    (acc, relation) => {
-      const { articleId, categoryId } = relation;
-      const name = categoryNameById.get(categoryId);
-      if (!acc[articleId]) acc[articleId] = [];
-      if (name) acc[articleId].push(name);
+  const categoryNamesByArticleId = filteredRelations.reduce(
+    (acc, rel) => {
+      const name = categoryNameById.get(rel.categoryId);
+      if (!acc[rel.articleId]) acc[rel.articleId] = [];
+      if (name) acc[rel.articleId].push(name);
       return acc;
     },
     {} as Record<number, string[]>
   );
 
-  const enrichedArticles: ArticleWithCategories[] = articles.map(article => ({
+  const enrichedArticles: ArticleWithCategories[] = articles.map((article) => ({
     ...article,
-    categories: categoryNamesByArticleId[article.id] || []
+    categories: categoryNamesByArticleId[article.id!] || [],
   }));
 
-  const sortedEnrichedArticles = sortArticles(enrichedArticles, "date");
-
-  return sortedEnrichedArticles;
+  return enrichedArticles;
 }
 
 export async function createArticle(allRss: any): Promise<void> {
